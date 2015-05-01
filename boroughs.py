@@ -6,11 +6,11 @@ import csv
 import pprint 
 
 grades = {
-    'A': float(100),
-    'B': float(90),
-    'C': float(80),
-    'D': float(70),
-    'F': float(60),
+    'A': float(1),
+    'B': float(.9),
+    'C': float(.8),
+    'D': float(.7),
+    'F': float(.6),
 }
 
 def get_score_summary(filename):
@@ -24,13 +24,13 @@ def get_score_summary(filename):
         boro = line[1]
         if grade != 'P' and grade != '':
             data[camis]=[grade, boro]
-    #pprint.pprint(data)
+    pprint.pprint(data)
     fhandler.close()
 
     restsum = {}
     
     for grade in data.itervalues():
-        #pprint.pprint(data)
+        pprint.pprint(data)
         letter = grade[0]
         boros = grade[1]
         restsum = {boros: letter}
