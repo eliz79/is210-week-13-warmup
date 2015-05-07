@@ -77,12 +77,12 @@ def get_market_density(filename):
         u'MANHATTAN': 39, u'QUEENS': 16}
     """
     fhandler = open(filename)
-    data = json.load(fhandler)
+    data = json.load(fhandler)['data']
     fhandler.close()
 
     boros = {}
 
-    for market in data['data']:
+    for market in data:
         boro = market[8].strip().upper()
         if boro not in boros:
             boros[boro] = 1
@@ -94,7 +94,7 @@ def get_market_density(filename):
 
 
 def correlate_data(restaurants, green_markets, outfile):
-    """Combines Data for Restaurants.
+    """Combines data for restaurants and markets.
     Args:
         rdata:(dict): restaurant score summary.
         mdata(dict):market density summary.
@@ -113,8 +113,8 @@ def correlate_data(restaurants, green_markets, outfile):
         if boro in mdata:
             density = float(mdata[boro]) / data[0]
             correlated[boro] = (data[1], density)
-    return correlated
-
     fhandler = open(outfile, 'w')
     json.dump(correlated, fhandler)
     fhandler.close()
+
+    return correlated
