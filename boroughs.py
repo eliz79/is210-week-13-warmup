@@ -2,99 +2,119 @@
 # -*- coding: utf-8 -*-
 """A module for boroughs."""
 
-import csv
 import json
-import pprint
 
-GRADES = {
+GRADE_SCALE = {
     'A': float(1.0),
-    'B': float(.9),
-    'C': float(.8),
-    'D': float(.7),
-    'F': float(.6)
+    'B': float(0.9),
+    'C': float(0.8),
+    'D': float(0.7),
+    'F': float(0.6)
 }
 
 
 def get_score_summary(filename):
-    """Docstring.
+    """To open and reads csv file and return a summary of data.
 
+    Args:
+        fhandler: opens a file in read form.
+        line: skips top line from file
+        data(dict): a dict for score data.
+
+    Returns:
+        None
+
+    Examples:
+        >>> get_score_summary('inspection_results.csv')
+        >>> {'BRONX': (156, 0.9762820512820514), 'BROOKLYN':
+        (417, 0.9745803357314141), 'STATEN ISLAND': (46, 0.9804347826086955),
+        'MANHATTAN': (748, 0.9771390374331531), 'QUEENS':
+        (414, 0.9719806763285017)}
     """
     fhandler = open(filename, 'r')
-    reader = csv.reader(fhandler)
-    next(reader)
     data = {}
-    for line in reader:
-        camis = line[0]
-        grade = line[10]
-        boro = line[1]
-        if grade != 'P' and grade != '':
-            data[camis] = [grade, boro]
+
+    fhandler.readline()
+    line = fhandler.readline()
+
+    while line:
+        lineparts = line.split(',')
+        grade = lineparts[10].strip().upper()
+        if grade in GRADE_SCALE:
+            data[lineparts[0].strip()] = {'boro': lineparts[1].strip().upper(),
+                                          'grade': GRADE_SCALE[grade]}
+        line = fhandler.readline()
     fhandler.close()
 
-    restsum = {}
-    for boro in data.values():
-        if boro[1] not in restsum:
-            restsum[boro[1]] = [1, GRADES[boro[0]]]
+    summary = {}
+    for values in data.itervalues():
+        if values['boro'] not in summary:
+            summary[values['boro']] = {'count': 1, 'grade': values['grade']}
         else:
-            restsum[boro[1]][0] += 1
-            restsum[boro[1]][1] += GRADES[boro[0]]
+            summary[values['boro']]['count'] += 1
+            summary[values['boro']]['grade'] += values['grade']
 
-    final = {}
-    for boro, grade in restsum.iteritems():
-        final[boro] = (grade[0], grade[1] / grade[0])
-    return final
+    result = {}
+    for boro, data in summary.iteritems():
+        result[boro] = (data['count'], data['grade'] / data['count'])
+
+    return result
 
 
 def get_market_density(filename):
-    """Docstring.
+    """Opens a file using json to store data in a dict.
+    Args:
+        fhandler: opens file in read form.
+        data: to loads json file
+        boros(dict): new dict for market density.
 
+    Returns:
+        market_data (dict) = Market density data.
+
+    Examples:
+        >>> get_market_density('green_markets.json')
+        {u'STATEN ISLAND': 2, u'BROOKLYN': 48, u'BRONX': 32,
+        u'MANHATTAN': 39, u'QUEENS': 16}
     """
-    fhandler = open(filename, 'r')
-    jdata = json.load(fhandler)['data']
-    final_data = {}
+    fhandler = open(filename)
+    data = json.load(fhandler)
     fhandler.close()
 
-    for data in jdata:
-        data[8] = data[8].strip()
-        if data[8] not in final_data.iterkeys():
-            val = 1
+    boros = {}
+
+    for market in data['data']:
+        boro = market[8].strip().upper()
+        if boro not in boros:
+            boros[boro] = 1
+
         else:
-            val = final_data[data[8]] + 1
+            boros[boro] += 1
 
-        final_data[data[8]] = val
-        final_data.update(final_data)
-
-    return final_data
+    return boros
 
 
-def correlate_data(csv='inspection_results.csv',
-                   markets='green_markets.json',
-                   combine='overall_data.json'):
-    """Docstring.
+def correlate_data(restaurants, green_markets, outfile):
+    """Combines Data for Restaurants.
+    Args:
+        rdata:(dict): restaurant score summary.
+        mdata(dict):market density summary.
 
+    Returns:
+        correlated(dict): a combined dict.
+
+    Example:
+        {'BRONX': (0.9762820512820514, 0.1987179487179487)}
     """
-    score_data = get_score_summary(csv)
-    market_data = get_market_density(markets)
-    combine_data = {}
+    rdata = get_score_summary(restaurants)
+    mdata = get_market_density(green_markets)
 
-    for item2 in market_data.iterkeys():
-        for item1 in score_data.iterkeys():
-            if item1 == str(item2).upper():
-                val1 = score_data[item1][1]
-                val2 = float(market_data[item2]) / (score_data[item1][0])
-                combine_data[item2] = (val1, val2)
-                combine_data.update(combine_data)
-    jdata = json.dumps(combine_data)
-    pprint.pprint(combine_data)
+    correlated = {}
+    for boro, data in rdata.iteritems():
+        if boro in mdata:
+            density = float(mdata[boro]) / data[0]
+            correlated[boro] = (data[1], density)
+    return correlated
 
-    fhandler = open(combine, 'w')
-    fhandler.write(jdata)
+    fhandler = open(outfile, 'w')
+    json.dump(correlated, fhandler)
     fhandler.close()
-
-
-
-
-
-if __name__ == '__main__':
-    test = get_score_summary('inspection_results.csv')
-    test2 = get_market_density('green_markets.json')
